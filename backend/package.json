@@ -1,0 +1,10 @@
+{
+    "name": "voting-app-backend",
+    "version": "1.0.0",
+    "description": "Realtime voting backend server",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "private": true
+}

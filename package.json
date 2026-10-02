@@ -1,0 +1,13 @@
+{
+    "name": "voting-app-demo",
+    "version": "1.0.0",
+    "description": "Android Voting Demo App and Admin Dashboard with Local/Firebase Backend",
+    "main": "backend/server.js",
+    "scripts": {
+        "backend": "node backend/server.js",
+        "admin": "cd admin && npm run dev",
+        "mobile": "cd mobile && npm run web",
+        "mobile:android": "cd mobile && npm run android"
+    },
+    "private": true
+}
