@@ -10,12 +10,32 @@ import {
     RefreshCw,
     Activity,
     ShieldAlert,
-    Server
+    Server,
+    Lock,
+    User,
+    KeyRound,
+    LogOut,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 
 const LOCAL_BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const DEFAULT_ADMIN_USER = import.meta.env.VITE_ADMIN_USER || 'admin';
+const DEFAULT_ADMIN_PASS = import.meta.env.VITE_ADMIN_PASS || 'admin123';
+const AUTH_STORAGE_KEY = 'VOTING_ADMIN_AUTHENTICATED';
 
 export default function App() {
+    // Authentication State
+    const [isAuthenticated, setIsAuthenticated] = useState(() => {
+        return sessionStorage.getItem(AUTH_STORAGE_KEY) === 'true';
+    });
+    const [usernameInput, setUsernameInput] = useState('');
+    const [passwordInput, setPasswordInput] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [authError, setAuthError] = useState('');
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+    // Dashboard State
     const [votes, setVotes] = useState({
         seniorCitizen: 0,
         governmentServant: 0
@@ -28,8 +48,39 @@ export default function App() {
     const [resetSuccess, setResetSuccess] = useState(false);
     const [resetError, setResetError] = useState('');
 
+    // Handle Login Submit
+    const handleLogin = (e) => {
+        e.preventDefault();
+        setAuthError('');
+        setIsLoggingIn(true);
+
+        setTimeout(() => {
+            if (
+                usernameInput.trim().toLowerCase() === DEFAULT_ADMIN_USER.toLowerCase() &&
+                passwordInput === DEFAULT_ADMIN_PASS
+            ) {
+                sessionStorage.setItem(AUTH_STORAGE_KEY, 'true');
+                setIsAuthenticated(true);
+                setAuthError('');
+            } else {
+                setAuthError('Invalid admin username or password. Please try again.');
+            }
+            setIsLoggingIn(false);
+        }, 400);
+    };
+
+    // Handle Logout
+    const handleLogout = () => {
+        sessionStorage.removeItem(AUTH_STORAGE_KEY);
+        setIsAuthenticated(false);
+        setUsernameInput('');
+        setPasswordInput('');
+    };
+
     // Dual-mode Sync Listener: Firebase OR Local SSE Backend
     useEffect(() => {
+        if (!isAuthenticated) return;
+
         if (isFirebaseConfigured) {
             setBackendType('Firebase Realtime Database');
             const votesRef = ref(db, 'votes');
@@ -57,7 +108,7 @@ export default function App() {
             return () => unsubscribe();
         } else {
             // Local Server SSE Stream
-            setBackendType('Local Node Backend (Port 5000)');
+            setBackendType('Cloud / Render Backend');
             let eventSource;
             try {
                 eventSource = new EventSource(`${LOCAL_BACKEND_URL}/api/stream`);
@@ -91,7 +142,7 @@ export default function App() {
                 if (eventSource) eventSource.close();
             };
         }
-    }, []);
+    }, [isAuthenticated]);
 
     const totalVotes = votes.seniorCitizen + votes.governmentServant;
 
@@ -125,6 +176,106 @@ export default function App() {
         }
     };
 
+    // Render Login Screen if not authenticated
+    if (!isAuthenticated) {
+        return (
+            <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 font-sans selection:bg-blue-500 selection:text-white relative overflow-hidden">
+                {/* Glowing Background Orbs */}
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="max-w-md w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-8 sm:p-10 shadow-2xl backdrop-blur-xl relative z-10 space-y-8">
+
+                    {/* Logo & Header */}
+                    <div className="text-center space-y-3">
+                        <div className="inline-flex p-3.5 bg-blue-600/15 border border-blue-500/30 rounded-2xl text-blue-400 shadow-xl shadow-blue-600/10">
+                            <Lock className="w-8 h-8" />
+                        </div>
+                        <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Admin Authentication</h1>
+                        <p className="text-xs sm:text-sm text-slate-400">Enter administrator credentials to access dashboard</p>
+                    </div>
+
+                    {/* Login Form */}
+                    <form onSubmit={handleLogin} className="space-y-5">
+                        {authError && (
+                            <div className="bg-red-950/70 border border-red-500/40 text-red-300 p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 animate-shake">
+                                <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />
+                                <span>{authError}</span>
+                            </div>
+                        )}
+
+                        {/* Username Input */}
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                                <User className="w-3.5 h-3.5 text-blue-400" />
+                                Username
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    required
+                                    value={usernameInput}
+                                    onChange={(e) => setUsernameInput(e.target.value)}
+                                    placeholder="Enter admin username"
+                                    className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 transition-all outline-none"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Password Input */}
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                                <KeyRound className="w-3.5 h-3.5 text-blue-400" />
+                                Password
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    required
+                                    value={passwordInput}
+                                    onChange={(e) => setPasswordInput(e.target.value)}
+                                    placeholder="Enter admin password"
+                                    className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 transition-all outline-none pr-11"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Submit Button */}
+                        <button
+                            type="submit"
+                            disabled={isLoggingIn}
+                            className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-extrabold text-sm rounded-xl tracking-wider shadow-lg shadow-blue-600/30 transition-all duration-200 flex items-center justify-center gap-2 mt-4"
+                        >
+                            {isLoggingIn ? (
+                                <>
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                    <span>Verifying...</span>
+                                </>
+                            ) : (
+                                <span>LOGIN TO DASHBOARD</span>
+                            )}
+                        </button>
+                    </form>
+
+                    {/* Default Credentials Note */}
+                    <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-4 text-xs text-slate-400 space-y-1">
+                        <p className="text-blue-400 font-extrabold uppercase tracking-wider text-[11px] mb-1">🔑 Demo Default Credentials:</p>
+                        <p><span className="text-slate-300 font-semibold">Username:</span> admin</p>
+                        <p><span className="text-slate-300 font-semibold">Password:</span> admin123</p>
+                    </div>
+
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-500 selection:text-white">
             {/* Top Header Bar */}
@@ -138,14 +289,14 @@ export default function App() {
                             <h1 className="text-xl sm:text-2xl font-black text-white tracking-wide flex items-center gap-2">
                                 ADMIN DASHBOARD
                                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 font-semibold tracking-normal">
-                                    Demo
+                                    Protected
                                 </span>
                             </h1>
                             <p className="text-xs text-slate-400 font-medium">Real-time Online Voting Counter</p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                         {/* Realtime Connection Status */}
                         <div className={`hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-semibold ${isConnected
                             ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
@@ -159,10 +310,21 @@ export default function App() {
                         {/* Reset Button Header Trigger */}
                         <button
                             onClick={() => setIsResetModalOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-red-300 hover:text-red-200 text-xs sm:text-sm font-bold transition-all duration-200 active:scale-95 shadow-md shadow-red-900/20"
+                            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-red-300 hover:text-red-200 text-xs font-bold transition-all duration-200 active:scale-95 shadow-md shadow-red-900/20"
                         >
-                            <RotateCcw className="w-4 h-4" />
-                            <span>RESET ALL VOTES</span>
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">RESET ALL VOTES</span>
+                            <span className="sm:hidden">RESET</span>
+                        </button>
+
+                        {/* Logout Button */}
+                        <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all duration-200 active:scale-95"
+                            title="Log Out"
+                        >
+                            <LogOut className="w-3.5 h-3.5 text-slate-400" />
+                            <span className="hidden sm:inline">LOG OUT</span>
                         </button>
                     </div>
                 </div>
@@ -313,7 +475,7 @@ export default function App() {
 
                     </div>
 
-                    {/* ASCII / Text Visual Comparison Representation as specified in prompt */}
+                    {/* ASCII / Text Visual Comparison Representation */}
                     <div className="mt-6 pt-6 border-t border-slate-800/60 bg-slate-950/60 rounded-2xl p-4 font-mono text-xs text-slate-400 space-y-3">
                         <p className="text-slate-500 text-[11px] font-sans font-semibold uppercase tracking-wider">Console Format Preview</p>
                         <div>
