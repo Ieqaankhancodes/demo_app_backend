@@ -93,9 +93,23 @@ const server = http.createServer((req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n==================================================`);
     console.log(`🚀 Local Realtime Voting Backend Server is RUNNING!`);
-    console.log(`📡 URL: http://localhost:${PORT}`);
+    console.log(`📡 URL: http://0.0.0.0:${PORT} (Network: http://192.168.1.10:${PORT})`);
     console.log(`==================================================\n`);
+
+    // Auto Self-Ping for Render Cloud Free-Tier (Pings every 10 minutes to prevent spin down)
+    const https = require('https');
+    const RENDER_URL = process.env.RENDER_EXTERNAL_URL || 'https://demo-app-backend-rn4k.onrender.com';
+    if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+        console.log(`[KEEP-ALIVE] Initializing 10-minute self-ping for ${RENDER_URL}...`);
+        setInterval(() => {
+            https.get(`${RENDER_URL}/api/votes`, (res) => {
+                console.log(`[KEEP-ALIVE] Auto-pinged ${RENDER_URL}/api/votes - Status: ${res.statusCode}`);
+            }).on('error', (err) => {
+                console.warn(`[KEEP-ALIVE] Ping warning: ${err.message}`);
+            });
+        }, 10 * 60 * 1000);
+    }
 });
