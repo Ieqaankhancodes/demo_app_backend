@@ -15,7 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ref, runTransaction } from 'firebase/database';
 import { db, isFirebaseConfigured } from './firebaseConfig';
 
-const LOCAL_BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+const LOCAL_BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://demo-app-backend-rn4k.onrender.com';
 const STORAGE_KEY_VOTED = 'VOTING_DEMO_HAS_VOTED';
 const STORAGE_KEY_OPTION = 'VOTING_DEMO_SELECTED_OPTION';
 

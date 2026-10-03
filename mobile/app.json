@@ -27,7 +27,8 @@
     "extra": {
       "eas": {
         "projectId": "aff7b22d-8b24-4e46-9abd-c1a3ad6f1969"
-      }
+      },
+      "backendUrl": "https://demo-app-backend-rn4k.onrender.com"
     }
   }
 }
